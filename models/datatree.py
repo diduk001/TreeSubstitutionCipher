@@ -3,27 +3,30 @@ from queue import SimpleQueue  # used in BFS
 from random import getrandbits, choice, shuffle  # for building random trees
 from typing import DefaultDict, Dict, List, Tuple, Optional, Callable, Any  # for type hinting
 
-from datanode import DataNode  # Tree contains DataNodes
+from .datanode import DataNode  # Tree contains DataNodes
 
-RANDOM_ID_BITS = 60
+RANDOM_ID_BITS = 60  # Size of random-generated Node identifiers
 
 
 class DataTree:
     """
     Class representation of Tree which Nodes are :class:`models.datanode.DataNode`
 
-    Initialization by default is empty block_tree
+    Initialization by default is empty tree
     """
 
     nodes: List[DataNode]
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """
+        Create empty tree
+        """
         self.nodes = list()
 
     def get_node_by_id(self, identifier: int) -> DataNode:
         """
         Returns Node by Identifier
-        If Node with such Identifier is not present, raises KeyError
+        :raise KeyError: If Node with such Identifier is not present
         :param identifier: An integer required to identify node
         :return: Node (or raises exception)
         """
@@ -33,11 +36,11 @@ class DataTree:
 
         raise KeyError("No node with such identifier")
 
-    def __getitem__(self, identifier):
+    def __getitem__(self, identifier: int) -> DataNode:
         """
-        Alternative form of get_node_by_id :meth:`models.datatree.get_node_by_id`
+        Alternative form of get_node_by_id :meth:`models.datatree.DataTree.get_node_by_id`
         Example:
-            print(block_tree[id].data)
+            print(tree[id].data)
         :param identifier: An integer required to identify node
         :return: Node (or raises exception)
         """
@@ -53,12 +56,12 @@ class DataTree:
         """
         return len(self.nodes)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return self.size()
 
     def to_id_adjacency_dict(self) -> Dict[int, Tuple[int]]:
         """
-        Convert to adjacency dict where key is node id and value is tuple of neighbours ids
+        Convert to adjacency dict where random_key is node id and value is tuple of neighbours ids
         Example:
             {7: (1, 5, 3), 3: (7,), 4: (5,), 1: (7, 6), 6: (1,), 5: (7, 4)}
             is
@@ -68,11 +71,12 @@ class DataTree:
             |  |
             6  4
 
-        :return: Dict where key is node id and value is tuple of neighbour ids
+        :return: Dict where random_key is node id and value is tuple of neighbour ids
         """
         result: Dict[int, Tuple[int]] = dict()
         for node in self.nodes:
             key = node.identifier
+            # identifiers for neighbours
             values = tuple(neighbour.identifier for neighbour in node.neighbours)
             result[key] = values
         return result
@@ -98,7 +102,7 @@ class DataTree:
                 node.neighbours.append(neighbour)
                 neighbour.neighbours.append(node)
 
-        # Copy values into block_tree object
+        # Copy values into tree object
         tree_obj = cls()
         for node in node_by_id.values():
             if node in tree_obj.nodes:
@@ -108,7 +112,7 @@ class DataTree:
 
     def add(self, ancestor_id: Optional[int], new_id: int) -> None:
         """
-        Adds Node to block_tree and makes an edge between new node and node with specified ancestor id.
+        Adds Node to tree and makes an edge between new node and node with specified ancestor id.
         If :param ancestor_id: is None, attempts to add a root
         :raise ValueError: if attempts to add second root;
         :raise KeyError: if attempts to add second node with specified id
@@ -137,20 +141,20 @@ class DataTree:
     @classmethod
     def random(cls, tree_size: int, root_id: Optional[int] = None):
         """
-        Builds random block_tree with specified size. Root identifier is specified
+        Builds random tree with specified size. Root identifier is specified
         Uses :func`random.getrandbits` to generate random identifiers with RANDOM_ID_BITS size.
         Uses :func`random.choice` to choose random ancestor
         Uses :func`random.shuffle` to shuffle all nodes after building
-        :param tree_size: Size of the block_tree
+        :param tree_size: Size of the tree
         :param root_id: Specified root identifier
-        :return: random block_tree object
+        :return: random tree object
         """
         if tree_size < 0:
             raise ValueError("Tree size can't be negative")
 
         tree_obj = cls()
         if tree_size == 0:
-            # block_tree is empty
+            # tree is empty
             return tree_obj
 
         # list of used identifiers
@@ -194,19 +198,23 @@ class DataTree:
         # BFS queue
         queue = SimpleQueue()
         # To check if Node is visited or not
-        in_queue: DefaultDict[int, bool] = defaultdict()
+        in_queue: DefaultDict[int, bool] = defaultdict(bool)
 
         # Put root in queue and mark as `will visit`
         queue.put(root_node)
         in_queue[root_node.identifier] = True
 
+        # BFS loop
         while not queue.empty():
+            # Get current node from queue and pop it
             cur_node = queue.get()
+            # Get neighbours of current node and sort them by identifier
             cur_node_neighbours = cur_node.neighbours
             sorted_cur_node_neighbours = sorted(cur_node_neighbours, key=lambda node: node.identifier)
 
             results.append(func(cur_node))
 
+            # Iterate over neighbours
             for neighbour in sorted_cur_node_neighbours:
                 if not in_queue[neighbour.identifier]:
                     queue.put(neighbour)
@@ -215,10 +223,22 @@ class DataTree:
 
     def get_ids(self) -> List[int]:
         """
-        Print all ids
+        Returns all ids in random order
         :return:
         """
         return [node.identifier for node in self.nodes]
+
+    def get_data_dict(self) -> Dict[int, int]:
+        """
+        Returns dict of nodes where random_key is id and value is data
+        :return:
+        """
+        return {node.identifier: node.data for node in self.nodes}
+
+    def write_by_data_dict(self, data_dict: Dict[int, int]) -> None:
+        for identifier, data in data_dict.items():
+            node_by_id = self.get_node_by_id(identifier)
+            node_by_id.data = data
 
     def get_tree_ids(self, root_id: int) -> List[int]:
         """
